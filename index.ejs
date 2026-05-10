@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<div class="container">
+  <h1>Discord Bot Dashboard</h1>
+  <p>Manage your bot easily</p>
+
+  <% if (!user) { %>
+    <a class="btn" href="/auth/discord">Login with Discord</a>
+  <% } else { %>
+    <a class="btn" href="/dashboard">Go Dashboard</a>
+  <% } %>
+
+</div>
+
+</body>
+</html>
