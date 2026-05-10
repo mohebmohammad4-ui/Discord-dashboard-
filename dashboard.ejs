@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<h2>Welcome <%= user.username %></h2>
+
+<img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" width="100" style="border-radius:50%">
+
+<br><br>
+<a class="btn" href="/logout">Logout</a>
+
+<h3>Your Servers</h3>
+
+<div class="grid">
+
+  <% user.guilds.forEach(g => { %>
+    <div class="card">
+      <h4><%= g.name %></h4>
+      <p>ID: <%= g.id %></p>
+    </div>
+  <% }) %>
+
+</div>
+
+</body>
+</html>
