@@ -3,7 +3,7 @@ const session = require("express-session");
 const passport = require("passport");
 const DiscordStrategy = require("passport-discord").Strategy;
 require("dotenv").config();
-
+const connectMongo = require("./database/mongo");
 const app = express();
 
 app.set("view engine", "ejs");
