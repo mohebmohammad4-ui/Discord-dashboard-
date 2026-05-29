@@ -5,6 +5,7 @@ const DiscordStrategy = require("passport-discord").Strategy;
 require("dotenv").config();
 const connectMongo = require("./database/mongo");
 const app = express();
+const Guild = require("./model/guildcnofig");
 
 app.set("view engine", "ejs");
 app.use(express.static("public"));
