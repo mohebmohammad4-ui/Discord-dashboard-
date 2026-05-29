@@ -5,7 +5,7 @@ const DiscordStrategy = require("passport-discord").Strategy;
 require("dotenv").config();
 
 const connectMongo = require("./database/mongo");
-// ✅ تم تصحيح المسار هنا بإضافة حرف s ليطابق المجلد الفعلي في مشروعك (models)
+// تم تصحيح المسار ليتوافق مع مجلد models بحرف s
 const Guild = require("./models/guildconfig");
 
 const app = express();
@@ -44,7 +44,7 @@ passport.use(new DiscordStrategy({
     profile.accessToken = accessToken;
     return done(null, profile);
   }
-));
+)); // الأقواس هنا مغلقة بشكل رياضي وبرمجي سليم تماماً لمنع خطأ سطر 33
 
 // ================== ROUTES ==================
 
