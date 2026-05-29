@@ -5,7 +5,7 @@ const DiscordStrategy = require("passport-discord").Strategy;
 require("dotenv").config();
 
 const connectMongo = require("./database/mongo");
-const Guild = require("./model/guildconfig"); // تم تصحيح الاسم هنا لضمان عمل الـ require بشكل سليم
+const Guild = require("./model/guildconfig");
 
 const app = express();
 
@@ -34,15 +34,16 @@ passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
 passport.use(new DiscordStrategy({
-  clientID: process.env.CLIENT_ID,
-  clientSecret: process.env.CLIENT_SECRET,
-  callbackURL: process.env.CALLBACK_URL,
-  scope: ["identify", "guilds"]
-},
-(accessToken, refreshToken, profile, done) => {
-  profile.accessToken = accessToken;
-  return done(null, profile);
-}));
+    clientID: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: process.env.CALLBACK_URL,
+    scope: ["identify", "guilds"]
+  },
+  (accessToken, refreshToken, profile, done) => {
+    profile.accessToken = accessToken;
+    return done(null, profile);
+  }
+)); // 👈 تم ضبط إغلاق الأقواس هنا بشكل صحيح تماماً لمنع خطأ سطر 33
 
 // ================== ROUTES ==================
 
@@ -61,21 +62,17 @@ app.get("/dashboard", (req, res) => {
 });
 
 // Login
-app.get("/auth/discord",
-  passport.authenticate("discord")
-);
+app.get("/auth/discord", passport.authenticate("discord"));
 
 // Callback
 app.get("/auth/discord/callback",
-  passport.authenticate("discord", {
-    failureRedirect: "/"
-  }),
+  passport.authenticate("discord", { failureRedirect: "/" }),
   (req, res) => {
     res.redirect("/dashboard");
   }
 );
 
-// Logout (تم تحديث الأقواس والـ Callback هنا لتفادي خطأ الـ Syntax)
+// Logout
 app.get("/logout", (req, res) => {
   req.logout((err) => {
     if (err) { 
