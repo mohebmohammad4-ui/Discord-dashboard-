@@ -3,22 +3,33 @@ const session = require("express-session");
 const passport = require("passport");
 const DiscordStrategy = require("passport-discord").Strategy;
 require("dotenv").config();
+
 const connectMongo = require("./database/mongo");
-const app = express();
 const Guild = require("./model/guildcnofig");
 
+const app = express();
+
+// ================== MIDDLEWARE ==================
 app.set("view engine", "ejs");
 app.use(express.static("public"));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
+// ================== SESSION ==================
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    secure: false,
+    maxAge: 1000 * 60 * 60 * 24
+  }
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ================== PASSPORT ==================
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
@@ -29,8 +40,11 @@ passport.use(new DiscordStrategy({
   scope: ["identify", "guilds"]
 },
 (accessToken, refreshToken, profile, done) => {
+  profile.accessToken = accessToken;
   return done(null, profile);
 }));
+
+// ================== ROUTES ==================
 
 // Home
 app.get("/", (req, res) => {
@@ -40,7 +54,10 @@ app.get("/", (req, res) => {
 // Dashboard
 app.get("/dashboard", (req, res) => {
   if (!req.user) return res.redirect("/");
-  res.render("dashboard", { user: req.user });
+  res.render("dashboard", {
+    user: req.user,
+    guild: null
+  });
 });
 
 // Login
@@ -63,7 +80,31 @@ app.get("/logout", (req, res) => {
   req.logout(() => {});
   res.redirect("/");
 });
+
+// ================== AUTO REPLY SYSTEM ==================
+app.post("/add-reply", async (req, res) => {
+  const { guildId, trigger, response } = req.body;
+
+  if (!guildId || !trigger || !response) {
+    return res.send("Missing data");
+  }
+
+  await Guild.findOneAndUpdate(
+    { guildId },
+    {
+      $push: {
+        autoReplies: { trigger, response }
+      }
+    },
+    { upsert: true }
+  );
+
+  res.redirect("/dashboard");
+});
+
+// ================== START ==================
 connectMongo();
+
 app.listen(process.env.PORT || 3000, () => {
   console.log("Dashboard running...");
 });
