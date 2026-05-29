@@ -5,7 +5,7 @@ const DiscordStrategy = require("passport-discord").Strategy;
 require("dotenv").config();
 
 const connectMongo = require("./database/mongo");
-const Guild = require("./model/guildcnofig");
+const Guild = require("./model/guildconfig"); // تم تصحيح الاسم هنا لضمان عمل الـ require بشكل سليم
 
 const app = express();
 
@@ -75,10 +75,15 @@ app.get("/auth/discord/callback",
   }
 );
 
-// Logout
+// Logout (تم تحديث الأقواس والـ Callback هنا لتفادي خطأ الـ Syntax)
 app.get("/logout", (req, res) => {
-  req.logout(() => {});
-  res.redirect("/");
+  req.logout((err) => {
+    if (err) { 
+      console.error(err);
+      return res.redirect("/");
+    }
+    res.redirect("/");
+  });
 });
 
 // ================== AUTO REPLY SYSTEM ==================
