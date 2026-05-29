@@ -5,7 +5,8 @@ const DiscordStrategy = require("passport-discord").Strategy;
 require("dotenv").config();
 
 const connectMongo = require("./database/mongo");
-const Guild = require("./model/guildconfig");
+// ✅ تم تصحيح المسار هنا بإضافة حرف s ليطابق المجلد الفعلي في مشروعك (models)
+const Guild = require("./models/guildconfig");
 
 const app = express();
 
@@ -17,7 +18,7 @@ app.use(express.json());
 
 // ================== SESSION ==================
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || "super-secret-key",
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -43,7 +44,7 @@ passport.use(new DiscordStrategy({
     profile.accessToken = accessToken;
     return done(null, profile);
   }
-)); // 👈 تم ضبط إغلاق الأقواس هنا بشكل صحيح تماماً لمنع خطأ سطر 33
+));
 
 // ================== ROUTES ==================
 
@@ -91,22 +92,26 @@ app.post("/add-reply", async (req, res) => {
     return res.send("Missing data");
   }
 
-  await Guild.findOneAndUpdate(
-    { guildId },
-    {
-      $push: {
-        autoReplies: { trigger, response }
-      }
-    },
-    { upsert: true }
-  );
-
-  res.redirect("/dashboard");
+  try {
+    await Guild.findOneAndUpdate(
+      { guildId },
+      {
+        $push: {
+          autoReplies: { trigger, response }
+        }
+      },
+      { upsert: true }
+    );
+    res.redirect("/dashboard");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Database error");
+  }
 });
 
 // ================== START ==================
 connectMongo();
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log("Dashboard running...");
+  console.log("Dashboard running successfully!");
 });
