@@ -1,145 +1,238 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
-  <title>تعديل إعدادات السيرفر</title>
-  <link rel="stylesheet" href="/style.css">
-  <style>
-    .section-box {
-      background: #1e293b;
-      padding: 20px;
-      margin: 20px auto;
-      border-radius: 15px;
-      max-width: 600px;
-      text-align: right;
-      direction: rtl;
-      border: 1px solid #334155;
-    }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 8px;
-      margin-bottom: 15px;
-      background: #0f172a;
-      border: 1px solid #334155;
-      color: white;
-      border-radius: 8px;
-      box-sizing: border-box;
-    }
-    .reply-list {
-      background: #0f172a;
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      font-size: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-left: 4px solid #38bdf8;
-    }
-    .delete-btn {
-      background: #ef4444;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .delete-btn:hover { background: #dc2626; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة السيرفر | Tokyo Community</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0f111a;
+            --bg-card: #151824;
+            --accent: #7289da;
+            --accent-glow: #a5b4fc;
+            --text: #f3f4f6;
+            --text-muted: #9ca3af;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text); padding: 30px; }
+        
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 40px; }
+        header h1 { font-size: 2.2rem; color: var(--text); font-weight: 900; }
+        header p { color: var(--text-muted); margin-top: 5px; }
+
+        .back-btn { display: inline-block; color: var(--accent-glow); text-decoration: none; margin-bottom: 20px; font-weight: bold; }
+
+        .grid { display: grid; grid-template-columns: 1fr; gap: 30px; }
+        @media (min-width: 768px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+        .card { background-color: var(--bg-card); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); height: fit-content; }
+        .card-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 20px; color: var(--accent-glow); display: flex; align-items: center; gap: 10px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 700; color: var(--text); }
+        
+        select, input[type="text"], input[type="number"] {
+            width: 100%; padding: 12px 15px; background-color: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px; color: #fff; font-size: 1rem; transition: border-color 0.3s;
+        }
+        select:focus, input:focus { border-color: var(--accent); outline: none; }
+        
+        .slider-container { display: flex; align-items: center; gap: 15px; }
+        input[type="range"] { flex: 1; accent-color: var(--accent); }
+        .slider-value { background: rgba(114,137,218,0.2); padding: 4px 10px; border-radius: 6px; font-weight: bold; color: var(--accent-glow); }
+
+        .btn {
+            background-color: var(--accent); color: white; border: none; padding: 12px 20px;
+            border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%;
+            transition: transform 0.2s, background-color 0.3s;
+        }
+        .btn:hover { background-color: #5b73c7; transform: translateY(-2px); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-danger:hover { background-color: #dc2626; }
+        
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .4s; border-radius: 34px; }
+        .slider-switch:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider-switch { background-color: var(--success); }
+        input:checked + .slider-switch:before { transform: translateX(24px); }
+
+        .list-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .list-table th, .list-table td { padding: 12px 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .list-table th { color: var(--text-muted); font-size: 0.9rem; }
+        
+        .delete-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <a href="/dashboard" class="back-btn">← العودة للوحة الخوادم</a>
+        <header>
+            <h1>إدارة سيرفر: <%= guild.name %></h1>
+            <p>تحكم بأنظمة التلفيل، الاختصارات، والردود التلقائية الذكية</p>
+        </header>
 
-  <div class="container" style="margin-top: 30px;">
-    <a class="btn" href="/dashboard" style="background: #475569; float: left; margin-left: 20px;">⬅️ العودة للسيرفرات</a>
-    <h2>لوحة تحكم سيرفر: <%= guild.name %></h2>
-    <p style="color: #64748b;">قم بتخصيص أنظمة البوت لسيرفرك بسهولة</p>
+        <div class="grid">
+            
+            <div class="card">
+                <div class="card-title">✨ نظام المستويات ومكافآت الرتب (موزون وعشوائي)</div>
+                <form action="/dashboard/<%= guild.id %>/leveling" method="POST">
+                    <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
+                        <label>تفعيل نظام الـ XP:</label>
+                        <label class="switch">
+                            <input type="checkbox" name="enabled" value="true" <%= settings.levelingSystem.enabled ? 'checked' : '' %>>
+                            <span class="slider-switch"></span>
+                        </label>
+                    </div>
 
-    <div class="section-box">
-      <h3>🤖 نظام الردود التلقائية (Auto Replies)</h3>
-      <form action="/dashboard/<%= guild.id %>/add-reply" method="POST">
-        <label>الكلمة المفتاحية (التي يرسلها العضو):</label>
-        <input type="text" name="trigger" placeholder="مثال: السلام عليكم" required>
-        
-        <label>رد البوت التلقائي عليها:</label>
-        <input type="text" name="response" placeholder="مثال: وعليكم السلام ورحمة الله وبركاته نورتنا!" required>
-        
-        <button type="submit" class="btn" style="width: 100%; margin-top: 0;">➕ إضافة الرد التلقائي</button>
-      </form>
+                    <div class="form-group">
+                        <label>مضاعف سرعة كسب الـ XP:</label>
+                        <div class="slider-container">
+                            <input type="range" name="xpRate" min="0.1" max="2.0" step="0.1" value="<%= settings.levelingSystem.xpRate || 1 %>" oninput="this.nextElementSibling.innerText = this.value + 'x'">
+                            <span class="slider-value"><%= settings.levelingSystem.xpRate || 1 %>x</span>
+                        </div>
+                        <small style="color: var(--text-muted); display:block; margin-top:5px;">(الـ XP يعطي كميات عشوائية بين 15-25 نقطة كل دقيقة لمنع التكرار والسبام).</small>
+                    </div>
 
-      <h4 style="margin-top: 20px; color: #38bdf8;">الردود الحالية المضافة:</h4>
-      <% if (settings.autoReplies && settings.autoReplies.length > 0) { %>
-        <% settings.autoReplies.forEach(reply => { %>
-          <div class="reply-list">
-            <div>
-              <strong>الكلمة:</strong> <%= reply.trigger %> <br>
-              <strong>الرد:</strong> <%= reply.response %>
+                    <button type="submit" class="btn">حفظ إعدادات الـ XP العامة</button>
+                </form>
+
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 25px 0;">
+                
+                <div style="font-weight: bold; margin-bottom: 15px; color: var(--accent-glow);">🎁 إعداد مكافأة رتبة لكل لفل:</div>
+                <form action="/dashboard/<%= guild.id %>/leveling/add-role" method="POST" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="number" name="level" placeholder="اللفل" style="width: 90px;" min="1" required>
+                    <select name="roleId" required>
+                        <option value="">-- اختر الرتبة --</option>
+                        <% if (locals.serverRoles && serverRoles.length > 0) { %>
+                            <% serverRoles.forEach(role => { %>
+                                <option value="<%= role.id %>"><%= role.name %></option>
+                            <% }) %>
+                        <% } else { %>
+                            <option value="" disabled>تأكد من تشغيل البوت لجلب الرتب...</option>
+                        <% } %>
+                    </select>
+                    <button type="submit" class="btn" style="width: auto; white-space: nowrap;">إضافة المكافأة</button>
+                </form>
+
+                <table class="list-table">
+                    <thead>
+                        <tr><th>اللفل</th><th>الرتبة الممنوحة</th><th>إجراء</th></tr>
+                    </thead>
+                    <tbody>
+                        <% if (settings.levelingSystem.levelRoles && settings.levelingSystem.levelRoles.length > 0) { %>
+                            <% settings.levelingSystem.levelRoles.forEach(lr => { %>
+                                <tr>
+                                    <td>مستوى <%= lr.level %></td>
+                                    <td>
+                                        <span style="color:var(--accent-glow)">
+                                            <% const rName = locals.serverRoles ? serverRoles.find(r => r.id === lr.roleId)?.name : null; %>
+                                            <%= rName || lr.roleId %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <form action="/dashboard/<%= guild.id %>/leveling/delete-role" method="POST" style="display:inline;">
+                                            <input type="hidden" name="levelRoleId" value="<%= lr._id %>">
+                                            <button type="submit" class="delete-btn">حذف</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">لا توجد رتب مكافآت مضافة بعد.</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
             </div>
-            <form action="/dashboard/<%= guild.id %>/delete-reply" method="POST" style="margin:0;">
-              <input type="hidden" name="replyId" value="<%= reply._id %>">
-              <button type="submit" class="delete-btn">🗑️ حذف</button>
-            </form>
-          </div>
-        <% }) %>
-      <% } else { %>
-        <p style="font-size: 13px; color: #64748b;">لا توجد ردود تلقائية مضافة حالياً.</p>
-      <% } %>
-    </div>
 
-    <div class="section-box">
-      <h3>📈 نظام التلفيل والـ XP</h3>
-      <form action="/dashboard/<%= guild.id %>/leveling" method="POST">
-        <label>حالة النظام:</label>
-        <select name="enabled">
-          <option value="true" <%= settings.levelingSystem.enabled ? 'selected' : '' %>>مفعّل ✅</option>
-          <option value="false" <%= !settings.levelingSystem.enabled ? 'selected' : '' %>>معطّل ❌</option>
-        </select>
+            <div class="card">
+                <div class="card-title">⌨️ نظام اختصارات الأوامر الذكي</div>
+                <form action="/dashboard/<%= guild.id %>/shortcut" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+                    <div class="form-group">
+                        <label>اختر أمر البوت الأساسي:</label>
+                        <select name="commandName" required>
+                            <option value="">-- اختر الأمر --</option>
+                            <% if (locals.botCommands && botCommands.length > 0) { %>
+                                <% botCommands.forEach(cmd => { %>
+                                    <option value="<%= cmd.name %>">/<%= cmd.name %> - <%= cmd.description %></option>
+                                )) %>
+                            <% } else { %>
+                                <option value="" disabled>تأكد من تشغيل البوت لجلب الأوامر تلقائياً...</option>
+                            <% } %>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>الاختصار السريع المستعار:</label>
+                        <input type="text" name="shortcut" placeholder="مثال: c لأمر clear أو m لأمر mute" required>
+                    </div>
 
-        <label>معدل كسب الخبرة (XP Multiplier):</label>
-        <select name="xpRate">
-          <option value="1" <%= settings.levelingSystem.xpRate === 1 ? 'selected' : '' %>>1x (طبيعي)</option>
-          <option value="1.5" <%= settings.levelingSystem.xpRate === 1.5 ? 'selected' : '' %>>1.5x (متوسط)</option>
-          <option value="2" <%= settings.levelingSystem.xpRate === 2 ? 'selected' : '' %>>2x (مضاعف)</option>
-        </select>
+                    <button type="submit" class="btn">ربط وإنشاء الاختصار</button>
+                </form>
 
-        <button type="submit" class="btn" style="width: 100%; margin-top: 0; background: #10b981;">💾 حفظ إعدادات التلفيل</button>
-      </form>
-    </div>
-
-    <div class="section-box" style="border-left: 4px solid #f59e0b;">
-      <h3>🔗 اختصارات أوامر البوت (Shortcuts)</h3>
-      <p style="font-size: 12px; color: #94a3b8; margin-top:-5px;">💡 تنبيه: يرجى كتابة الاختصار بدون علامة الـ (/) لكي يقرأه البوت كأمر نصي في الشات (مثال: اكتب <code style="color:#fbbf24;">a</code> أو <code style="color:#fbbf24;">!a</code>).</p>
-      
-      <form action="/dashboard/<%= guild.id %>/shortcut" method="POST">
-        <label>اسم الأمر الأساسي (بدون /):</label>
-        <input type="text" name="commandName" placeholder="مثال: avatar أو help" required>
-        
-        <label>الاسم المختصر البديل (الذي سيكتبه العضو في الشات):</label>
-        <input type="text" name="shortcut" placeholder="مثال: !a أو !h أو صورة" required>
-        
-        <button type="submit" class="btn" style="width: 100%; margin-top: 0; background: #f59e0b;">✨ إضافة الاختصار</button>
-      </form>
-
-      <h4 style="margin-top: 20px; color: #fbbf24;">الاختصارات الحالية:</h4>
-      <% if (settings.commandShortcuts && settings.commandShortcuts.length > 0) { %>
-        <% settings.commandShortcuts.forEach(sc => { %>
-          <div class="reply-list" style="border-left-color: #f59e0b;">
-            <div>
-              <strong>الأمر الأساسي:</strong> /<%= sc.commandName %> <br>
-              <strong>الاختصار في الشات:</strong> <%= sc.shortcut %>
+                <table class="list-table" style="margin-top: 20px;">
+                    <thead>
+                        <tr><th>الأمر الأصلي</th><th>الاختصار المستعار</th><th>إجراء</th></tr>
+                    </thead>
+                    <tbody>
+                        <% if (settings.commandShortcuts && settings.commandShortcuts.length > 0) { %>
+                            <% settings.commandShortcuts.forEach(sc => { %>
+                                <tr>
+                                    <td>/<%= sc.commandName %></td>
+                                    <td><strong style="color: var(--success)"><%= sc.shortcut %></strong></td>
+                                    <td>
+                                        <form action="/dashboard/<%= guild.id %>/delete-shortcut" method="POST" style="display:inline;">
+                                            <input type="hidden" name="shortcutId" value="<%= sc._id %>">
+                                            <button type="submit" class="delete-btn">حذف</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">لا توجد اختصارات مضافة.</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
             </div>
-            <form action="/dashboard/<%= guild.id %>/delete-shortcut" method="POST" style="margin:0;">
-              <input type="hidden" name="shortcutId" value="<%= sc._id %>">
-              <button type="submit" class="delete-btn">🗑️ حذف</button>
-            </form>
-          </div>
-        <% }) %>
-      <% } else { %>
-        <p style="font-size: 13px; color: #64748b;">لا توجد اختصارات مضافة حالياً.</p>
-      <% } %>
+
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">💬 نظام الردود التلقائية الذكية</div>
+                <form action="/dashboard/<%= guild.id %>/add-reply" method="POST" style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                    <input type="text" name="trigger" placeholder="الكلمة المفتاحية (مثال: السلام عليكم)" style="flex: 1; min-width: 200px;" required>
+                    <input type="text" name="response" placeholder="رد البوت التلقائي" style="flex: 1; min-width: 200px;" required>
+                    <button type="submit" class="btn" style="width: auto;">إضافة الرد</button>
+                </form>
+
+                <table class="list-table">
+                    <thead>
+                        <tr><th>الكلمة المرسلة</th><th>رد البوت التلقائي</th><th>إجراء</th></tr>
+                    </thead>
+                    <tbody>
+                        <% if (settings.autoReplies && settings.autoReplies.length > 0) { %>
+                            <% settings.autoReplies.forEach(reply => { %>
+                                <tr>
+                                    <td><strong><%= reply.trigger %></strong></td>
+                                    <td><%= reply.response %></td>
+                                    <td>
+                                        <form action="/dashboard/<%= guild.id %>/delete-reply" method="POST" style="display:inline;">
+                                            <input type="hidden" name="replyId" value="<%= reply._id %>">
+                                            <button type="submit" class="delete-btn">حذف</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">لا توجد ردود تلقائية مضافة حالياً.</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
     </div>
-
-  </div>
-
 </body>
 </html>
