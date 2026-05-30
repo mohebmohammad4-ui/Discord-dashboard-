@@ -1,37 +1,99 @@
 body {
   margin: 0;
-  font-family: Arial;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: #0f172a;
-  color: white;
+  color: #f8fafc;
   text-align: center;
+  direction: rtl; /* لدعم واجهة التحكم باللغة العربية بشكل صحيح */
 }
 
 .container {
-  margin-top: 100px;
+  margin: 50px auto;
+  padding: 20px;
+  max-width: 1200px;
+}
+
+h1, h2, h3 {
+  color: #ffffff;
 }
 
 .btn {
-  padding: 12px 20px;
+  padding: 12px 24px;
   background: #5865F2;
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   text-decoration: none;
   display: inline-block;
-  margin-top: 20px;
+  margin-top: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn:hover {
+  background: #4752c4;
+}
+
+.btn:active {
+  transform: scale(0.98);
 }
 
 .card {
   background: #1e293b;
-  padding: 20px;
-  margin: 10px;
-  border-radius: 15px;
+  padding: 25px;
+  margin: 15px;
+  border-radius: 12px;
   display: inline-block;
-  width: 250px;
+  width: 260px;
+  border: 1px solid #334155;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  vertical-align: top;
 }
 
 .grid {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  margin-top: 30px;
+}
+
+/* التنسيقات الإضافية للوحة التحكم المتقدمة */
+.section-box {
+  background: #1e293b;
+  padding: 25px;
+  margin: 25px auto;
+  border-radius: 16px;
+  max-width: 650px;
+  text-align: right;
+  border: 1px solid #334155;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  margin-bottom: 18px;
+  background: #0f172a;
+  border: 1px solid #475569;
+  color: white;
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 15px;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #5865F2;
+}
+
+.reply-list {
+  background: #0f172a;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  border-right: 4px solid #38bdf8; /* تعطي لمسة جمالية بجانب النص */
+  text-align: right;
 }
