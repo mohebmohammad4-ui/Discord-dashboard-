@@ -9,7 +9,7 @@ const Guild = require("./models/guildconfig");
 
 const app = express();
 
-// ================== SAFETY CHECK (يحمي من crash في Railway) ==================
+// ================== SAFETY CHECK ==================
 if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.CALLBACK_URL) {
   console.error("❌ Missing ENV variables (CLIENT_ID / CLIENT_SECRET / CALLBACK_URL)");
 }
