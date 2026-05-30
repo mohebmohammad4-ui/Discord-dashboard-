@@ -27,11 +27,25 @@
     }
     .reply-list {
       background: #0f172a;
-      padding: 10px;
+      padding: 12px;
       border-radius: 8px;
       margin-bottom: 10px;
       font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 4px solid #38bdf8;
     }
+    .delete-btn {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .delete-btn:hover { background: #dc2626; }
   </style>
 </head>
 <body>
@@ -57,8 +71,14 @@
       <% if (settings.autoReplies && settings.autoReplies.length > 0) { %>
         <% settings.autoReplies.forEach(reply => { %>
           <div class="reply-list">
-            <strong>الكلمة:</strong> <%= reply.trigger %> <br>
-            <strong>الرد:</strong> <%= reply.response %>
+            <div>
+              <strong>الكلمة:</strong> <%= reply.trigger %> <br>
+              <strong>الرد:</strong> <%= reply.response %>
+            </div>
+            <form action="/dashboard/<%= guild.id %>/delete-reply" method="POST" style="margin:0;">
+              <input type="hidden" name="replyId" value="<%= reply._id %>">
+              <button type="submit" class="delete-btn">🗑️ حذف</button>
+            </form>
           </div>
         <% }) %>
       <% } else { %>
@@ -86,14 +106,16 @@
       </form>
     </div>
 
-    <div class="section-box">
+    <div class="section-box" style="border-left: 4px solid #f59e0b;">
       <h3>🔗 اختصارات أوامر البوت (Shortcuts)</h3>
+      <p style="font-size: 12px; color: #94a3b8; margin-top:-5px;">💡 تنبيه: يرجى كتابة الاختصار بدون علامة الـ (/) لكي يقرأه البوت كأمر نصي في الشات (مثال: اكتب <code style="color:#fbbf24;">a</code> أو <code style="color:#fbbf24;">!a</code>).</p>
+      
       <form action="/dashboard/<%= guild.id %>/shortcut" method="POST">
-        <label>أمر البوت الأساسي:</label>
-        <input type="text" name="commandName" placeholder="مثال: /help أو /avatar" required>
+        <label>اسم الأمر الأساسي (بدون /):</label>
+        <input type="text" name="commandName" placeholder="مثال: avatar أو help" required>
         
-        <label>الاسم المختصر البديل:</label>
-        <input type="text" name="shortcut" placeholder="مثال: /h أو /a" required>
+        <label>الاسم المختصر البديل (الذي سيكتبه العضو في الشات):</label>
+        <input type="text" name="shortcut" placeholder="مثال: !a أو !h أو صورة" required>
         
         <button type="submit" class="btn" style="width: 100%; margin-top: 0; background: #f59e0b;">✨ إضافة الاختصار</button>
       </form>
@@ -101,8 +123,15 @@
       <h4 style="margin-top: 20px; color: #fbbf24;">الاختصارات الحالية:</h4>
       <% if (settings.commandShortcuts && settings.commandShortcuts.length > 0) { %>
         <% settings.commandShortcuts.forEach(sc => { %>
-          <div class="reply-list">
-            <strong>الأمر الأساسي:</strong> <%= sc.commandName %> ⬅️ <strong>الاختصار:</strong> <%= sc.shortcut %>
+          <div class="reply-list" style="border-left-color: #f59e0b;">
+            <div>
+              <strong>الأمر الأساسي:</strong> /<%= sc.commandName %> <br>
+              <strong>الاختصار في الشات:</strong> <%= sc.shortcut %>
+            </div>
+            <form action="/dashboard/<%= guild.id %>/delete-shortcut" method="POST" style="margin:0;">
+              <input type="hidden" name="shortcutId" value="<%= sc._id %>">
+              <button type="submit" class="delete-btn">🗑️ حذف</button>
+            </form>
           </div>
         <% }) %>
       <% } else { %>
