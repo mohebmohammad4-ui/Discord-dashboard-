@@ -1,14 +1,18 @@
 const express = require("express");
 const session = require("express-session");
 const passport = require("passport");
-const DiscordStrategy = require("passport-discord").Strategy;
+const { Strategy: DiscordStrategy } = require("passport-discord");
 require("dotenv").config();
 
 const connectMongo = require("./database/mongo");
-// تم تصحيح المسار ليتوافق مع مجلد models بحرف s
 const Guild = require("./models/guildconfig");
 
 const app = express();
+
+// ================== SAFETY CHECK (يحمي من crash في Railway) ==================
+if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.CALLBACK_URL) {
+  console.error("❌ Missing ENV variables (CLIENT_ID / CLIENT_SECRET / CALLBACK_URL)");
+}
 
 // ================== MIDDLEWARE ==================
 app.set("view engine", "ejs");
@@ -18,7 +22,7 @@ app.use(express.json());
 
 // ================== SESSION ==================
 app.use(session({
-  secret: process.env.SESSION_SECRET || "super-secret-key",
+  secret: process.env.SESSION_SECRET || "fallback_secret",
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -27,35 +31,35 @@ app.use(session({
   }
 }));
 
+// ================== PASSPORT ==================
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ================== PASSPORT ==================
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
 passport.use(new DiscordStrategy({
-    clientID: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
-    callbackURL: process.env.CALLBACK_URL,
-    scope: ["identify", "guilds"]
-  },
-  (accessToken, refreshToken, profile, done) => {
-    profile.accessToken = accessToken;
-    return done(null, profile);
-  }
-)); // الأقواس هنا مغلقة بشكل رياضي وبرمجي سليم تماماً لمنع خطأ سطر 33
+  clientID: process.env.CLIENT_ID,
+  clientSecret: process.env.CLIENT_SECRET,
+  callbackURL: process.env.CALLBACK_URL,
+  scope: ["identify", "guilds"]
+},
+(accessToken, refreshToken, profile, done) => {
+  profile.accessToken = accessToken;
+  return done(null, profile);
+}));
 
 // ================== ROUTES ==================
 
 // Home
 app.get("/", (req, res) => {
-  res.render("index", { user: req.user });
+  res.render("index", { user: req.user || null });
 });
 
 // Dashboard
 app.get("/dashboard", (req, res) => {
   if (!req.user) return res.redirect("/");
+
   res.render("dashboard", {
     user: req.user,
     guild: null
