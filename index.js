@@ -9,10 +9,9 @@ require("dotenv").config();
 const app = express();
 
 // ================== CONNECT TO DATABASE ==================
-// فحص الاتصال وتأمينه منعاً لتعليق السيرفر
 if (process.env.MONGO_URI) {
   mongoose.connect(process.env.MONGO_URI, {
-    serverSelectionTimeoutMS: 5000 // إذا لم يتصل خلال 5 ثوانٍ يتخطى لتجنب تعليق الموقع
+    serverSelectionTimeoutMS: 5000
   })
   .then(() => console.log("⚙️ Connected to Bot Database successfully!"))
   .catch(err => console.error("❌ Database connection error:", err));
@@ -32,12 +31,11 @@ const GuildConfigSchema = new mongoose.Schema({
   commandShortcuts: [{ commandName: String, shortcut: String }]
 });
 
-// منع كراش إعادة تعريف الموديل عند التحديث
 const Guild = mongoose.models.GuildConfig || mongoose.model("GuildConfig", GuildConfigSchema);
 
 // ================== MIDDLEWARE ==================
 app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "view")); // متوافق تماماً مع مجلد view الخاص بك
+app.set("views", path.join(__dirname, "view"));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -69,12 +67,12 @@ passport.use(new DiscordStrategy({
 
 // ================== ROUTES ==================
 
-// 1. الصفحة الرئيسية
+// 1. Home Page
 app.get("/", (req, res) => {
   res.render("index", { user: req.user || null });
 });
 
-// 2. لوحة التحكم
+// 2. Dashboard Server List
 app.get("/dashboard", async (req, res) => {
   if (!req.user) return res.redirect("/");
   try {
@@ -85,29 +83,27 @@ app.get("/dashboard", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send("خطأ داخلي أثناء تحميل اللوحة");
+    res.status(500).send("Internal Server Error during dashboard loading");
   }
 });
 
-// 3. رابط إدارة سيرفر معين (تم تأمينه ضد التعليق)
+// 3. Manage Specific Server
 app.get("/dashboard/:guildId", async (req, res) => {
   if (!req.user) return res.redirect("/");
   const { guildId } = req.params;
   
   try {
     const guild = req.user.guilds.find(g => g.id === guildId && (g.permissions & 0x8) === 0x8);
-    if (!guild) return res.status(403).send("غير مسموح لك بالدخول لهذا السيرفر.");
+    if (!guild) return res.status(403).send("Access Denied: You do not have Admin permissions.");
 
     let settings = null;
     
-    // إذا كانت قاعدة البيانات متصلة بنجاح نقرأ منها
     if (mongoose.connection.readyState === 1) {
       settings = await Guild.findOne({ guildId });
       if (!settings) {
         settings = await Guild.create({ guildId });
       }
     } else {
-      // إعدادات افتراضية مؤقتة لكي تفتح الصفحة ولا تعطي خطأ ريلواي الأسود في حال فشل الداتابيز
       settings = { guildId, autoReplies: [], levelingSystem: { enabled: true, xpRate: 1 }, commandShortcuts: [] };
     }
 
@@ -118,18 +114,18 @@ app.get("/dashboard/:guildId", async (req, res) => {
     });
   } catch (err) {
     console.error("Error loading manage page:", err);
-    res.status(500).send("حدث خطأ أثناء الاتصال بقاعدة البيانات، تأكد من متغير MONGO_URI");
+    res.status(500).send("Database connection error. Check MONGO_URI variable.");
   }
 });
 
-// 4. حفظ الردود التلقائية الجديدة
+// 4. Add Auto Reply
 app.post("/dashboard/:guildId/add-reply", async (req, res) => {
-  if (!req.user) return res.status(401).send("غير مصرح");
+  if (!req.user) return res.status(401).send("Unauthorized");
   const { guildId } = req.params;
   const { trigger, response } = req.body;
 
   try {
-    if (mongoose.connection.readyState !== 1) return res.status(500).send("قاعدة البيانات غير متصلة حالياً");
+    if (mongoose.connection.readyState !== 1) return res.status(500).send("Database is not connected currently.");
     await Guild.findOneAndUpdate(
       { guildId },
       { $push: { autoReplies: { trigger, response } } },
@@ -138,18 +134,18 @@ app.post("/dashboard/:guildId/add-reply", async (req, res) => {
     res.redirect(`/dashboard/${guildId}`);
   } catch (err) {
     console.error(err);
-    res.status(500).send("خطأ في قاعدة البيانات");
+    res.status(500).send("Database Error");
   }
 });
 
-// 5. تحديث إعدادات نظام التلفيل
+// 5. Update Leveling Settings
 app.post("/dashboard/:guildId/leveling", async (req, res) => {
-  if (!req.user) return res.status(401).send("غير مصرح");
+  if (!req.user) return res.status(401).send("Unauthorized");
   const { guildId } = req.params;
   const { enabled, xpRate } = req.body;
 
   try {
-    if (mongoose.connection.readyState !== 1) return res.status(500).send("قاعدة البيانات غير متصلة حالياً");
+    if (mongoose.connection.readyState !== 1) return res.status(500).send("Database is not connected currently.");
     await Guild.findOneAndUpdate(
       { guildId },
       { 
@@ -161,18 +157,18 @@ app.post("/dashboard/:guildId/leveling", async (req, res) => {
     res.redirect(`/dashboard/${guildId}`);
   } catch (err) {
     console.error(err);
-    res.status(500).send("خطأ أثناء تحديث نظام التلفيل");
+    res.status(500).send("Error updating leveling system settings");
   }
 });
 
-// 6. إضافة اختصار لأمر
+// 6. Add Command Shortcut
 app.post("/dashboard/:guildId/shortcut", async (req, res) => {
-  if (!req.user) return res.status(401).send("غير مصرح");
+  if (!req.user) return res.status(401).send("Unauthorized");
   const { guildId } = req.params;
   const { commandName, shortcut } = req.body;
 
   try {
-    if (mongoose.connection.readyState !== 1) return res.status(500).send("قاعدة البيانات غير متصلة حالياً");
+    if (mongoose.connection.readyState !== 1) return res.status(500).send("Database is not connected currently.");
     await Guild.findOneAndUpdate(
       { guildId },
       { $push: { commandShortcuts: { commandName, shortcut } } },
@@ -181,7 +177,7 @@ app.post("/dashboard/:guildId/shortcut", async (req, res) => {
     res.redirect(`/dashboard/${guildId}`);
   } catch (err) {
     console.error(err);
-    res.status(500).send("خطأ أثناء إضافة الاختصار");
+    res.status(500).send("Error adding command shortcut");
   }
 });
 
@@ -195,7 +191,6 @@ app.get("/logout", (req, res) => {
   req.logout((err) => { res.redirect("/"); });
 });
 
-// تشغيل السيرفر
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Dashboard is running successfully on port ${PORT}!`);
