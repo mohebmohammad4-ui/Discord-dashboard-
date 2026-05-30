@@ -11,7 +11,7 @@ const app = express();
 // ================== CONNECT TO DATABASE ==================
 if (process.env.MONGO_URI) {
   mongoose.connect(process.env.MONGO_URI, {
-    serverSelectionTimeoutMS: 5000
+    serverSelectionTimeoutMS: 5000 // حماية ضد تعليق الخادم إذا كانت الداتابيز غير متصلة
   })
   .then(() => console.log("⚙️ Connected to Bot Database successfully!"))
   .catch(err => console.error("❌ Database connection error:", err));
@@ -35,7 +35,7 @@ const Guild = mongoose.models.GuildConfig || mongoose.model("GuildConfig", Guild
 
 // ================== MIDDLEWARE ==================
 app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "view"));
+app.set("views", path.join(__dirname, "view")); // متوافق مع مجلد view الخاص بك
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -67,12 +67,12 @@ passport.use(new DiscordStrategy({
 
 // ================== ROUTES ==================
 
-// 1. Home Page
+// 1. الصفحة الرئيسية (Home)
 app.get("/", (req, res) => {
   res.render("index", { user: req.user || null });
 });
 
-// 2. Dashboard Server List
+// 2. قائمة سيرفرات لوحة التحكم (Server List)
 app.get("/dashboard", async (req, res) => {
   if (!req.user) return res.redirect("/");
   try {
@@ -87,7 +87,7 @@ app.get("/dashboard", async (req, res) => {
   }
 });
 
-// 3. Manage Specific Server
+// 3. صفحة التحكم بسيرفر معين (Manage Server)
 app.get("/dashboard/:guildId", async (req, res) => {
   if (!req.user) return res.redirect("/");
   const { guildId } = req.params;
@@ -104,6 +104,7 @@ app.get("/dashboard/:guildId", async (req, res) => {
         settings = await Guild.create({ guildId });
       }
     } else {
+      // إعدادات افتراضية مؤقتة لعرض اللوحة بدون كراش إذا كانت الداتابيز غير متصلة
       settings = { guildId, autoReplies: [], levelingSystem: { enabled: true, xpRate: 1 }, commandShortcuts: [] };
     }
 
@@ -118,7 +119,7 @@ app.get("/dashboard/:guildId", async (req, res) => {
   }
 });
 
-// 4. Add Auto Reply
+// 4. حفظ الردود التلقائية الجديدة (Auto Reply Route)
 app.post("/dashboard/:guildId/add-reply", async (req, res) => {
   if (!req.user) return res.status(401).send("Unauthorized");
   const { guildId } = req.params;
@@ -138,7 +139,7 @@ app.post("/dashboard/:guildId/add-reply", async (req, res) => {
   }
 });
 
-// 5. Update Leveling Settings
+// 5. تحديث إعدادات نظام التلفيل (Leveling Route)
 app.post("/dashboard/:guildId/leveling", async (req, res) => {
   if (!req.user) return res.status(401).send("Unauthorized");
   const { guildId } = req.params;
@@ -161,7 +162,7 @@ app.post("/dashboard/:guildId/leveling", async (req, res) => {
   }
 });
 
-// 6. Add Command Shortcut
+// 6. إضافة اختصار لأمر (Command Shortcut Route)
 app.post("/dashboard/:guildId/shortcut", async (req, res) => {
   if (!req.user) return res.status(401).send("Unauthorized");
   const { guildId } = req.params;
@@ -181,6 +182,7 @@ app.post("/dashboard/:guildId/shortcut", async (req, res) => {
   }
 });
 
+// روابط تسجيل الدخول والخروج عبر ديسكورد
 app.get("/auth/discord", passport.authenticate("discord"));
 
 app.get("/auth/discord/callback", passport.authenticate("discord", { failureRedirect: "/" }), (req, res) => {
@@ -191,6 +193,7 @@ app.get("/logout", (req, res) => {
   req.logout((err) => { res.redirect("/"); });
 });
 
+// تشغيل السيرفر والاستماع للمنفذ
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Dashboard is running successfully on port ${PORT}!`);
