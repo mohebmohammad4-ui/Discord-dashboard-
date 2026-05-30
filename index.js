@@ -9,9 +9,16 @@ require("dotenv").config();
 const app = express();
 
 // ================== CONNECT TO DATABASE ==================
-mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/tokyo_bot")
+// فحص الاتصال وتأمينه منعاً لتعليق السيرفر
+if (process.env.MONGO_URI) {
+  mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 5000 // إذا لم يتصل خلال 5 ثوانٍ يتخطى لتجنب تعليق الموقع
+  })
   .then(() => console.log("⚙️ Connected to Bot Database successfully!"))
   .catch(err => console.error("❌ Database connection error:", err));
+} else {
+  console.log("⚠️ MONGO_URI missing! Dashboard running in offline mode.");
+}
 
 // ================== DATABASE SCHEMAS ==================
 const GuildConfigSchema = new mongoose.Schema({
@@ -24,11 +31,13 @@ const GuildConfigSchema = new mongoose.Schema({
   },
   commandShortcuts: [{ commandName: String, shortcut: String }]
 });
-const Guild = mongoose.model("GuildConfig", GuildConfigSchema);
+
+// منع كراش إعادة تعريف الموديل عند التحديث
+const Guild = mongoose.models.GuildConfig || mongoose.model("GuildConfig", GuildConfigSchema);
 
 // ================== MIDDLEWARE ==================
 app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "view"));
+app.set("views", path.join(__dirname, "view")); // متوافق تماماً مع مجلد view الخاص بك
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -68,31 +77,49 @@ app.get("/", (req, res) => {
 // 2. لوحة التحكم
 app.get("/dashboard", async (req, res) => {
   if (!req.user) return res.redirect("/");
-  const adminGuilds = req.user.guilds.filter(guild => (guild.permissions & 0x8) === 0x8);
-  res.render("dashboard", {
-    user: req.user,
-    guilds: adminGuilds
-  });
+  try {
+    const adminGuilds = req.user.guilds.filter(guild => (guild.permissions & 0x8) === 0x8);
+    res.render("dashboard", {
+      user: req.user,
+      guilds: adminGuilds
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("خطأ داخلي أثناء تحميل اللوحة");
+  }
 });
 
-// 3. رابط إدارة سيرفر معين
+// 3. رابط إدارة سيرفر معين (تم تأمينه ضد التعليق)
 app.get("/dashboard/:guildId", async (req, res) => {
   if (!req.user) return res.redirect("/");
   const { guildId } = req.params;
   
-  const guild = req.user.guilds.find(g => g.id === guildId && (g.permissions & 0x8) === 0x8);
-  if (!guild) return res.status(403).send("غير مسموح لك بالدخول لهذا السيرفر.");
+  try {
+    const guild = req.user.guilds.find(g => g.id === guildId && (g.permissions & 0x8) === 0x8);
+    if (!guild) return res.status(403).send("غير مسموح لك بالدخول لهذا السيرفر.");
 
-  let settings = await Guild.findOne({ guildId });
-  if (!settings) {
-    settings = await Guild.create({ guildId });
+    let settings = null;
+    
+    // إذا كانت قاعدة البيانات متصلة بنجاح نقرأ منها
+    if (mongoose.connection.readyState === 1) {
+      settings = await Guild.findOne({ guildId });
+      if (!settings) {
+        settings = await Guild.create({ guildId });
+      }
+    } else {
+      // إعدادات افتراضية مؤقتة لكي تفتح الصفحة ولا تعطي خطأ ريلواي الأسود في حال فشل الداتابيز
+      settings = { guildId, autoReplies: [], levelingSystem: { enabled: true, xpRate: 1 }, commandShortcuts: [] };
+    }
+
+    res.render("manage", {
+      user: req.user,
+      guild: guild,
+      settings: settings
+    });
+  } catch (err) {
+    console.error("Error loading manage page:", err);
+    res.status(500).send("حدث خطأ أثناء الاتصال بقاعدة البيانات، تأكد من متغير MONGO_URI");
   }
-
-  res.render("manage", {
-    user: req.user,
-    guild: guild,
-    settings: settings
-  });
 });
 
 // 4. حفظ الردود التلقائية الجديدة
@@ -102,6 +129,7 @@ app.post("/dashboard/:guildId/add-reply", async (req, res) => {
   const { trigger, response } = req.body;
 
   try {
+    if (mongoose.connection.readyState !== 1) return res.status(500).send("قاعدة البيانات غير متصلة حالياً");
     await Guild.findOneAndUpdate(
       { guildId },
       { $push: { autoReplies: { trigger, response } } },
@@ -121,6 +149,7 @@ app.post("/dashboard/:guildId/leveling", async (req, res) => {
   const { enabled, xpRate } = req.body;
 
   try {
+    if (mongoose.connection.readyState !== 1) return res.status(500).send("قاعدة البيانات غير متصلة حالياً");
     await Guild.findOneAndUpdate(
       { guildId },
       { 
@@ -143,6 +172,7 @@ app.post("/dashboard/:guildId/shortcut", async (req, res) => {
   const { commandName, shortcut } = req.body;
 
   try {
+    if (mongoose.connection.readyState !== 1) return res.status(500).send("قاعدة البيانات غير متصلة حالياً");
     await Guild.findOneAndUpdate(
       { guildId },
       { $push: { commandShortcuts: { commandName, shortcut } } },
@@ -155,7 +185,6 @@ app.post("/dashboard/:guildId/shortcut", async (req, res) => {
   }
 });
 
-// الروابط المعتادة
 app.get("/auth/discord", passport.authenticate("discord"));
 
 app.get("/auth/discord/callback", passport.authenticate("discord", { failureRedirect: "/" }), (req, res) => {
