@@ -19,14 +19,15 @@ if (process.env.MONGO_URI) {
   console.log("⚠️ MONGO_URI missing! Dashboard running in offline mode.");
 }
 
-// ================== DATABASE SCHEMAS ==================
+// ================== DATABASE SCHEMAS (تم التحديث لدعم رتب المستويات) ==================
 const GuildConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
   autoReplies: [{ trigger: String, response: String }],
   levelingSystem: {
     enabled: { type: Boolean, default: true },
     xpRate: { type: Number, default: 1 },
-    announcementChannel: { type: String, default: null }
+    announcementChannel: { type: String, default: null },
+    levelRoles: [{ level: Number, roleId: String }] // [ميزة مضافة]: رتب مستويات مكافآت الـ XP
   },
   commandShortcuts: [{ commandName: String, shortcut: String }]
 });
@@ -65,6 +66,9 @@ passport.use(new DiscordStrategy({
   return done(null, profile);
 }));
 
+// عنوان الـ API الداخلي للبوت لجلب الأوامر والرتب (تأكد من تعديل الـ Port إذا تطلب الأمر)
+const BOT_API_URL = process.env.BOT_API_URL || "http://localhost:3000";
+
 // ================== ROUTES ==================
 
 app.get("/", (req, res) => {
@@ -85,6 +89,7 @@ app.get("/dashboard", async (req, res) => {
   }
 });
 
+// صفحة إدارة السيرفر المحدثة بالتصميم والبيانات الاحترافية
 app.get("/dashboard/:guildId", async (req, res) => {
   if (!req.user) return res.redirect("/");
   const { guildId } = req.params;
@@ -94,20 +99,31 @@ app.get("/dashboard/:guildId", async (req, res) => {
     if (!guild) return res.status(403).send("Access Denied: You do not have Admin permissions.");
 
     let settings = null;
-    
     if (mongoose.connection.readyState === 1) {
-      settings = await Guild.findOne({ guildId });
-      if (!settings) {
-        settings = await Guild.create({ guildId });
-      }
+      settings = await Guild.findOne({ guildId }) || await Guild.create({ guildId });
     } else {
-      settings = { guildId, autoReplies: [], levelingSystem: { enabled: true, xpRate: 1 }, commandShortcuts: [] };
+      settings = { guildId, autoReplies: [], levelingSystem: { enabled: true, xpRate: 1, levelRoles: [] }, commandShortcuts: [] };
+    }
+
+    // جلب الرتب والأوامر حركياً من البوت
+    let botCommands = [];
+    let serverRoles = [];
+    try {
+      const fetch = (await import("node-fetch")).default;
+      const cmdRes = await fetch(`${BOT_API_URL}/api/bot-commands`);
+      const roleRes = await fetch(`${BOT_API_URL}/api/server-roles`);
+      if(cmdRes.ok) botCommands = await cmdRes.json();
+      if(roleRes.ok) serverRoles = await roleRes.json();
+    } catch(e) {
+      console.log("⚠️ Could not fetch active data from bot, using fallbacks.");
     }
 
     res.render("manage", {
       user: req.user,
       guild: guild,
-      settings: settings
+      settings: settings,
+      botCommands: botCommands,  // ممرر لصفحة الـ EJS لقائمة الاختصارات المنسدلة
+      serverRoles: serverRoles   // ممرر لصفحة الـ EJS لقائمة رتب الـ XP
     });
   } catch (err) {
     console.error("Error loading manage page:", err);
@@ -115,7 +131,7 @@ app.get("/dashboard/:guildId", async (req, res) => {
   }
 });
 
-// [تحديث]: إضافة رد تلقائي ومنع التكرار والتنظيف
+// إضافة رد تلقائي
 app.post("/dashboard/:guildId/add-reply", async (req, res) => {
   if (!req.user) return res.status(401).send("Unauthorized");
   const { guildId } = req.params;
@@ -127,7 +143,6 @@ app.post("/dashboard/:guildId/add-reply", async (req, res) => {
   try {
     if (mongoose.connection.readyState !== 1) return res.status(500).send("Database offline.");
     
-    // سحب الإعدادات أولاً لمنع التكرار الحرفي
     const checkConfig = await Guild.findOne({ guildId });
     if(checkConfig && checkConfig.autoReplies.some(r => r.trigger.toLowerCase() === trigger.toLowerCase())) {
         return res.send("<script>alert('هذا الرد التلقائي موجود بالفعل!'); window.location.href='/dashboard/" + guildId + "';</script>");
@@ -145,7 +160,7 @@ app.post("/dashboard/:guildId/add-reply", async (req, res) => {
   }
 });
 
-// [ميزة جديدة]: حذف رد تلقائي
+// حذف رد تلقائي
 app.post("/dashboard/:guildId/delete-reply", async (req, res) => {
   if (!req.user) return res.status(401).send("Unauthorized");
   const { guildId } = req.params;
@@ -163,6 +178,7 @@ app.post("/dashboard/:guildId/delete-reply", async (req, res) => {
   }
 });
 
+// تعديل إعدادات الـ XP العامة (سرعة التلفيل الموزون العشوائي)
 app.post("/dashboard/:guildId/leveling", async (req, res) => {
   if (!req.user) return res.status(401).send("Unauthorized");
   const { guildId } = req.params;
@@ -185,15 +201,51 @@ app.post("/dashboard/:guildId/leveling", async (req, res) => {
   }
 });
 
-// [تحديث]: إضافة اختصار مع تنظيف البادئات الخاطئة ومنع التكرار
+// [ميزة جديدة]: إضافة رتبة مكافأة للمستويات
+app.post("/dashboard/:guildId/leveling/add-role", async (req, res) => {
+  if (!req.user) return res.status(401).send("Unauthorized");
+  const { guildId } = req.params;
+  const { level, roleId } = req.body;
+
+  try {
+    await Guild.findOneAndUpdate(
+      { guildId },
+      { $push: { "levelingSystem.levelRoles": { level: parseInt(level), roleId } } },
+      { upsert: true }
+    );
+    res.redirect(`/dashboard/${guildId}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error adding level role reward");
+  }
+});
+
+// [ميزة جديدة]: حذف رتبة مكافأة مستوى
+app.post("/dashboard/:guildId/leveling/delete-role", async (req, res) => {
+  if (!req.user) return res.status(401).send("Unauthorized");
+  const { guildId } = req.params;
+  const { levelRoleId } = req.body;
+
+  try {
+    await Guild.findOneAndUpdate(
+      { guildId },
+      { $pull: { "levelingSystem.levelRoles": { _id: levelRoleId } } }
+    );
+    res.redirect(`/dashboard/${guildId}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error deleting level role");
+  }
+});
+
+// إضافة اختصار للأوامر
 app.post("/dashboard/:guildId/shortcut", async (req, res) => {
   if (!req.user) return res.status(401).send("Unauthorized");
   const { guildId } = req.params;
   let { commandName, shortcut } = req.body;
 
-  // تنظيف المدخلات وإزالة الـ / لتفادي مشاكل القراءة النصية داخل ديسكورد
-  commandName = commandName.trim().replace(/^\//, ''); // يحول /avatar إلى avatar
-  shortcut = shortcut.trim().replace(/^\//, '');       // يحول /a إلى a
+  commandName = commandName.trim().replace(/^\//, ''); 
+  shortcut = shortcut.trim().replace(/^\//, '');       
 
   try {
     if (mongoose.connection.readyState !== 1) return res.status(500).send("Database offline.");
@@ -215,7 +267,7 @@ app.post("/dashboard/:guildId/shortcut", async (req, res) => {
   }
 });
 
-// [ميزة جديدة]: حذف اختصار أمر
+// حذف اختصار أمر
 app.post("/dashboard/:guildId/delete-shortcut", async (req, res) => {
   if (!req.user) return res.status(401).send("Unauthorized");
   const { guildId } = req.params;
@@ -245,5 +297,5 @@ app.get("/logout", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Dashboard is running successfully on port ${PORT}!`);
+  console.log(`🚀 Dashboard UI Backend is running successfully on port ${PORT}!`);
 });
