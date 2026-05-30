@@ -88,6 +88,7 @@ input:focus, select:focus {
   border-color: #5865F2;
 }
 
+/* تحديث: جعل القائمة مرنة لتوزيع النص وزر الحذف بشكل احترافي */
 .reply-list {
   background: #0f172a;
   padding: 12px;
@@ -96,4 +97,24 @@ input:focus, select:focus {
   font-size: 14px;
   border-right: 4px solid #38bdf8; /* تعطي لمسة جمالية بجانب النص */
   text-align: right;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ميزة جديدة: تنسيق أزرار الحذف الحمراء */
+.delete-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.delete-btn:hover {
+  background: #dc2626;
 }
