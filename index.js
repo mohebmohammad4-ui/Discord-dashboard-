@@ -51,7 +51,6 @@ passport.deserializeUser((obj, done) => done(null, obj));
 passport.use(new DiscordStrategy({
   clientID: process.env.CLIENT_ID,
   clientSecret: process.env.CLIENT_SECRET,
-  // تم تثبيت الرابط هنا مباشرة لحل مشكلة الديسكورد نهائياً
   callbackURL: "https://discord-dashboard-production-bfd2.up.railway.app/auth/discord/callback",
   scope: ["identify", "guilds"]
 }, (accessToken, refreshToken, profile, done) => {
@@ -66,20 +65,17 @@ app.get("/", (req, res) => {
   res.render("index", { user: req.user || null });
 });
 
-// 2. لوحة التحكم (عرض سيرفرات المستخدم وصلاحياته)
+// 2. لوحة التحكم
 app.get("/dashboard", async (req, res) => {
   if (!req.user) return res.redirect("/");
-  
-  // تصفية السيرفرات ليعرض فقط السيرفرات التي يمتلك فيها المستخدم صلاحية Administrator
   const adminGuilds = req.user.guilds.filter(guild => (guild.permissions & 0x8) === 0x8);
-
   res.render("dashboard", {
     user: req.user,
     guilds: adminGuilds
   });
 });
 
-// 3. رابط إدارة سيرفر معين (الردود، التلفيل، الاختصارات)
+// 3. رابط إدارة سيرفر معين
 app.get("/dashboard/:guildId", async (req, res) => {
   if (!req.user) return res.redirect("/");
   const { guildId } = req.params;
@@ -114,4 +110,64 @@ app.post("/dashboard/:guildId/add-reply", async (req, res) => {
     res.redirect(`/dashboard/${guildId}`);
   } catch (err) {
     console.error(err);
-    res.status(500).send("خطأ في قاعدة البيانات
+    res.status(500).send("خطأ في قاعدة البيانات");
+  }
+});
+
+// 5. تحديث إعدادات نظام التلفيل
+app.post("/dashboard/:guildId/leveling", async (req, res) => {
+  if (!req.user) return res.status(401).send("غير مصرح");
+  const { guildId } = req.params;
+  const { enabled, xpRate } = req.body;
+
+  try {
+    await Guild.findOneAndUpdate(
+      { guildId },
+      { 
+        "levelingSystem.enabled": enabled === "true",
+        "levelingSystem.xpRate": parseFloat(xpRate) || 1
+      },
+      { upsert: true }
+    );
+    res.redirect(`/dashboard/${guildId}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("خطأ أثناء تحديث نظام التلفيل");
+  }
+});
+
+// 6. إضافة اختصار لأمر
+app.post("/dashboard/:guildId/shortcut", async (req, res) => {
+  if (!req.user) return res.status(401).send("غير مصرح");
+  const { guildId } = req.params;
+  const { commandName, shortcut } = req.body;
+
+  try {
+    await Guild.findOneAndUpdate(
+      { guildId },
+      { $push: { commandShortcuts: { commandName, shortcut } } },
+      { upsert: true }
+    );
+    res.redirect(`/dashboard/${guildId}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("خطأ أثناء إضافة الاختصار");
+  }
+});
+
+// الروابط المعتادة
+app.get("/auth/discord", passport.authenticate("discord"));
+
+app.get("/auth/discord/callback", passport.authenticate("discord", { failureRedirect: "/" }), (req, res) => {
+  res.redirect("/dashboard");
+});
+
+app.get("/logout", (req, res) => {
+  req.logout((err) => { res.redirect("/"); });
+});
+
+// تشغيل السيرفر
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Dashboard is running successfully on port ${PORT}!`);
+});
